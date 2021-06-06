@@ -1,0 +1,66 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: zoomla-dep
+  namespace: zoomla-sridhar
+spec:
+  selector:
+    matchLabels:
+      app: joomla
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: joomla
+        env: test
+        tier: frontend
+    spec:
+      containers:
+      - name: joomla
+        image: joomla:3.9-php7.2-apache
+        env:
+          - name: JOOMLA_DB_HOST
+            value: joomla-mysql
+          - name: JOOMLA_DB_PASSWORD
+            value: "db@123"
+        resources:
+          limits:
+            memory: "128Mi"
+            cpu: "500m"
+        ports:
+        - containerPort: 80
+          name: joomla
+        volumeMounts:
+          - name: pv-claim
+            mountPath: /var/www/html
+      volumes:
+        - name: pv-claim
+          persistentVolumeClaim:
+            claimName: pv-claim
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: joomla-svc
+  namespace: zoomla-sridhar
+spec:
+  selector:
+    app: joomla
+    tier: frontend
+  ports:
+  - port: 80
+    targetPort: 80
+  type: LoadBalancer
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pv-claim
+  namespace: zoomla-sridhar
+spec:
+  resources:
+    requests:
+      storage: 5Gi
+  accessModes:
+    - ReadWriteOnce
+

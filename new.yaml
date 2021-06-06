@@ -1,0 +1,67 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: joomla
+  labels:
+    app: joomla
+spec:
+  ports:
+    - port: 80
+      targetPort: 80
+  selector:
+    app: joomla
+    tier: frontend
+  type: LoadBalancer
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: jm-pv-claim
+  labels:
+    app: joomla
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: apps/v1 # for versions before 1.9.0 use apps/v1beta2
+kind: Deployment
+metadata:
+  name: joomla
+  labels:
+    app: joomla
+spec:
+  selector:
+    matchLabels:
+      app: joomla
+      tier: frontend
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: joomla
+        tier: frontend
+        env: test
+    spec:
+      containers:
+      - image: edhongcy/joomla-without-database:3.8.13
+        name: joomla
+        env:
+        - name: JOOMLA_DB_HOST
+          value: mysql
+        - name: JOOMLA_DB_PASSWORD
+          value: "mysql@123"
+        ports:
+        - containerPort: 80
+          name: joomla
+        volumeMounts:
+        - name: joomla-persistent-storage
+          mountPath: /var/www/html
+      volumes:
+      - name: joomla-persistent-storage
+        persistentVolumeClaim:
+          claimName: jm-pv-claim
+---
